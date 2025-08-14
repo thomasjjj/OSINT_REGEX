@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "osint-regex"
-version = "0.1.0"
+dynamic = ["version"]
 description = "A collection of regex patterns for OSINT."
 readme = "README.md"
 authors = [{name = "OSINTRegex"}]
@@ -14,3 +14,6 @@ requires-python = ">=3.8"
 [tool.setuptools]
 package-dir = {"" = "src"}
 packages = ["osint_regex"]
+
+[tool.setuptools.dynamic]
+version = {attr = "osint_regex.__version__"}

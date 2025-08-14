@@ -6,7 +6,7 @@ Use for Good. Use with care.
 
 ## Release
 
-1. Update `__version__` in `src/osint_regex/__init__.py` and the version in `pyproject.toml`.
+1. Update `__version__` in `src/osint_regex/__init__.py`.
 2. Add a new entry to `CHANGELOG.md` describing the changes.
 3. Commit the changes.
 4. Create and push a tag:
