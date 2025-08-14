@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "osint-regex"
+version = "0.1.0"
+description = "A collection of regex patterns for OSINT."
+readme = "README.md"
+authors = [{name = "OSINTRegex"}]
+license = {text = "MIT"}
+requires-python = ">=3.8"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+packages = ["osint_regex"]
