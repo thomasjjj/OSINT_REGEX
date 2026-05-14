@@ -22,11 +22,11 @@ import re
 import uuid as uuid_module
 from dataclasses import dataclass
 from functools import partial, wraps
-from typing import Any, Callable, Optional, Pattern
+from typing import Any, Callable, Match, Optional, Pattern
 
 __version__ = "0.2.1"
 
-MatchExtractor = Callable[[re.Match[str]], Optional[Any]]
+MatchExtractor = Callable[[Match[str]], Optional[Any]]
 
 _BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 _BASE58_INDEX = {char: idx for idx, char in enumerate(_BASE58_ALPHABET)}
@@ -46,15 +46,15 @@ def _clean_text(value: str) -> str:
     return value.rstrip(".,;:!?)]}")
 
 
-def _full_match(match: re.Match[str]) -> str:
+def _full_match(match: Match[str]) -> str:
     return _clean_text(match.group(0))
 
 
-def _twitter_handle(match: re.Match[str]) -> str:
+def _twitter_handle(match: Match[str]) -> str:
     return match.group(1)
 
 
-def _extract_if(match: re.Match[str], validator: Callable[[str], Any]) -> str | None:
+def _extract_if(match: Match[str], validator: Callable[[str], Any]) -> str | None:
     value = _clean_text(match.group(0))
     result = validator(value)
     if isinstance(result, str):
@@ -62,7 +62,7 @@ def _extract_if(match: re.Match[str], validator: Callable[[str], Any]) -> str | 
     return value if result else None
 
 
-def _phone_number(match: re.Match[str]) -> str | None:
+def _phone_number(match: Match[str]) -> str | None:
     value = _clean_text(match.group(0))
     digits = re.sub(r"\D", "", value)
     if not 10 <= len(digits) <= 15:
@@ -81,7 +81,7 @@ def _validate_phone_e164(value: str) -> str | None:
     return f"+{digits}"
 
 
-def _latlon(match: re.Match[str]) -> tuple[str, str]:
+def _latlon(match: Match[str]) -> tuple[str, str]:
     return match.group(1), match.group(2)
 
 
