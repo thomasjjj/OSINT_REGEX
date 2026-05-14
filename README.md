@@ -107,20 +107,6 @@ Compatibility:
 
 See the full reference in the repository: https://github.com/thomasjjj/OSINT_REGEX/blob/master/docs/reference.md
 
-## Publishing
-
-```bash
-python -m pip install build twine
-python -m build
-python -m twine check dist/*
-python -m twine upload dist/*
-```
-
-For a dry run, upload to TestPyPI first:
-
-```bash
-python -m twine upload --repository testpypi dist/*
-```
 
 ## Development
 
