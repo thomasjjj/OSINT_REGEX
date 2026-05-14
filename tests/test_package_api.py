@@ -134,6 +134,7 @@ def test_public_exports_and_version_match_project_metadata():
 
     assert expected_exports.issubset(exported)
     assert len(osreg.__all__) == len(exported)
+    assert osreg.__version__ == "0.2.1"
 
     pyproject_text = Path("pyproject.toml").read_text(encoding="utf-8")
     match = re.search(r'^version = "([^"]+)"$', pyproject_text, re.MULTILINE)

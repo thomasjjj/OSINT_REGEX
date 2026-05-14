@@ -4,12 +4,30 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "osint-regex"
-version = "0.2.0"
+version = "0.2.1"
 description = "Regular expression helpers for OSINT tasks."
-readme = "README.md"
+readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.8"
 dependencies = []
-urls = {"Homepage" = "https://github.com/OpenAI/OSINT_REGEX"}
+keywords = ["osint", "regex", "text-extraction", "parsing"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[project.urls]
+Homepage = "https://github.com/thomasjjj/OSINT_REGEX"
+Repository = "https://github.com/thomasjjj/OSINT_REGEX"
+Issues = "https://github.com/thomasjjj/OSINT_REGEX/issues"
+Documentation = "https://github.com/thomasjjj/OSINT_REGEX/blob/master/docs/reference.md"
 
 [tool.ruff]
 line-length = 88

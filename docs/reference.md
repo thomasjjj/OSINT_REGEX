@@ -12,6 +12,8 @@ import osint_regex as osreg
 
 The package is stdlib-only and expects decoded `str` input.
 
+The repository homepage is https://github.com/thomasjjj/OSINT_REGEX.
+
 ## Canonical Helpers
 
 Each canonical helper returns a list of matches for one category.

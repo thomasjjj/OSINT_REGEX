@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from functools import wraps
 from typing import Any, Callable, Optional, Pattern
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 MatchExtractor = Callable[[re.Match[str]], Optional[Any]]
 
