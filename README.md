@@ -2,13 +2,31 @@
 
 Stdlib-only regular expression helpers for extracting common OSINT artifacts from text.
 
-## Install
+## What it does
+
+`osint_regex` is a registry-driven package for finding:
+
+- emails
+- websites
+- phone numbers
+- social handles
+- wallet addresses
+- transaction hashes
+- prices
+- latitude/longitude pairs
+- long opaque strings
+
+The preferred import style is:
+
+```python
+import osint_regex as osreg
+```
+
+## Quick Start
 
 ```bash
 python -m pip install -e .
 ```
-
-## Use
 
 ```python
 import osint_regex as osreg
@@ -24,9 +42,9 @@ print(osreg.find(text, "btc_wallet"))
 print(osreg.scan(text))
 ```
 
-## API
+## Core API
 
-Canonical helpers are function-first:
+Canonical helpers:
 
 - `email(text)`
 - `website(text)`
@@ -46,17 +64,37 @@ Canonical helpers are function-first:
 - `latlon(text)`
 - `long_string(text)`
 
-Dynamic lookup is available through:
+Dynamic lookup:
 
 - `find(text, kind)`
 - `scan(text)`
 
-Legacy `find_*` names remain as thin aliases during the transition, so existing call sites can move over gradually.
+Compatibility:
 
-`scan(text)` returns a stable dictionary keyed by canonical category name, with empty lists included for categories that do not match.
+- Legacy `find_*` aliases remain available.
+- `OSINTRegex` is still provided for older call sites.
+
+## Behavior
+
+- `find` accepts canonical kinds such as `"phone"` and legacy aliases such as `"find_phone_numbers"`.
+- `scan` returns a stable dictionary with every canonical category included.
+- Match lists are normalized from `re.finditer`, so capture groups do not leak into results.
+- `phone` is heuristic rather than a full international numbering parser.
+- `latlon` is also heuristic and works best on standalone coordinate text.
+- The package expects decoded `str` input. Decode `bytes` before calling the API.
+
+## Documentation
+
+See [docs/reference.md](docs/reference.md) for the full category table, matching notes, compatibility details, and extension guidance.
 
 ## Development
 
 ```bash
-pytest
+python -m pip install -r requirements-dev.txt
+python -m pytest -q
+python -m ruff check .
+python -m ruff format --check .
+python -m mypy osint_regex tests
+python -m build
+python -m pre_commit run --all-files
 ```

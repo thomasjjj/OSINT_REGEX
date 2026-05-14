@@ -10,3 +10,12 @@ readme = "README.md"
 requires-python = ">=3.8"
 dependencies = []
 urls = {"Homepage" = "https://github.com/OpenAI/OSINT_REGEX"}
+
+[tool.ruff]
+line-length = 88
+target-version = "py38"
+
+[tool.mypy]
+python_version = "3.8"
+show_error_codes = true
+warn_unused_configs = true

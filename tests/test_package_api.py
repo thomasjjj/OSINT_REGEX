@@ -1,64 +1,150 @@
+import re
+from pathlib import Path
+
 import pytest
 
 import osint_regex as osreg
 
 
-def test_import_smoke_and_canonical_helpers():
-    text = "Contact info@example.com or call +1 (555) 123-4567."
+CANONICAL_CASES = [
+    ("email", "Reach info@example.com.", ["info@example.com"]),
+    (
+        "website",
+        "Visit https://www.example.com/about.",
+        ["https://www.example.com/about"],
+    ),
+    ("phone", "Call +1 (555) 123-4567.", ["+1 (555) 123-4567"]),
+    ("twitter_handle", "Follow @OpenAI.", ["OpenAI"]),
+    (
+        "btc_wallet",
+        "BTC 1BoatSLRHtKNngkdXEeobR76b53LETtpyT.",
+        ["1BoatSLRHtKNngkdXEeobR76b53LETtpyT"],
+    ),
+    ("eth_wallet", f"ETH 0x{'a' * 40}.", [f"0x{'a' * 40}"]),
+    ("monero_wallet", f"Monero 4A{'1' * 93}.", [f"4A{'1' * 93}"]),
+    ("dash_wallet", f"Dash X{'1' * 33}.", [f"X{'1' * 33}"]),
+    ("cardano_wallet", "Cardano addr1abc123.", ["addr1abc123"]),
+    ("doge_wallet", f"Doge D{'A' * 33}.", [f"D{'A' * 33}"]),
+    ("litecoin_wallet", f"Litecoin L{'1' * 26}.", [f"L{'1' * 26}"]),
+    ("ripple_wallet", f"Ripple r{'A' * 33}.", [f"r{'A' * 33}"]),
+    ("stellar_wallet", f"Stellar G{'A' * 40}.", [f"G{'A' * 40}"]),
+    ("transaction_hash", f"Hash {'a' * 64}.", ["a" * 64]),
+    (
+        "price",
+        "Prices: USD 10.00, 10 USD, and €12.50.",
+        ["USD 10.00", "10 USD", "€12.50"],
+    ),
+    ("latlon", "Coordinates: 48.8584, 2.2945.", [("48.8584", "2.2945")]),
+    ("long_string", "OpaqueValue_1234567890", ["OpaqueValue_1234567890"]),
+]
 
-    assert osreg.email(text) == ["info@example.com"]
-    assert osreg.phone(text) == ["+1 (555) 123-4567"]
-    assert osreg.find(text, "phone") == ["+1 (555) 123-4567"]
+NEGATIVE_CASES = [
+    ("email", "Reach info@example without a domain."),
+    ("website", "Visit example without a domain."),
+    ("phone", "Call 1234 for help."),
+    ("twitter_handle", "No social handle here."),
+    ("btc_wallet", "BTC 4BoatSLRHtKNngkdXEeobR76b53LETtpyT."),
+    ("eth_wallet", f"ETH 0x{'g' * 40}."),
+    ("monero_wallet", f"Monero 5A{'1' * 93}."),
+    ("dash_wallet", f"Dash Y{'1' * 33}."),
+    ("cardano_wallet", "Cardano addrabc123."),
+    ("doge_wallet", f"Doge E{'A' * 33}."),
+    ("litecoin_wallet", f"Litecoin O{'1' * 26}."),
+    ("ripple_wallet", f"Ripple s{'A' * 33}."),
+    ("stellar_wallet", f"Stellar H{'A' * 40}."),
+    ("transaction_hash", f"Hash {'g' * 64}."),
+    ("price", "The amount is 10.00."),
+    ("latlon", "Coordinates: 91.0000, 181.0000."),
+    ("long_string", "a" * 19),
+]
+
+ALIAS_CASES = [
+    ("email", "find_emails"),
+    ("website", "find_websites"),
+    ("phone", "find_phone_numbers"),
+    ("btc_wallet", "find_btc_wallets"),
+    ("price", "find_prices"),
+    ("latlon", "find_latlon"),
+    ("long_string", "find_long_strings"),
+]
+
+SAMPLES = {kind: text for kind, text, _ in CANONICAL_CASES}
+CANONICAL_KINDS = [kind for kind, _, _ in CANONICAL_CASES]
+COMBINED_TEXT = "\n".join(text for _, text, _ in CANONICAL_CASES)
 
 
-def test_legacy_aliases_still_work():
-    text = "Visit https://www.example.com and email admin@example.com"
+@pytest.mark.parametrize("kind,text,expected", CANONICAL_CASES)
+def test_canonical_helpers_and_find(kind, text, expected):
+    helper = getattr(osreg, kind)
 
-    assert osreg.find_emails(text) == ["admin@example.com"]
-    assert osreg.find_websites(text) == ["https://www.example.com"]
-    assert osreg.OSINTRegex().find_emails(text) == ["admin@example.com"]
-
-
-def test_btc_wallet_returns_full_address():
-    address = "1BoatSLRHtKNngkdXEeobR76b53LETtpyT"
-
-    assert osreg.btc_wallet(address) == [address]
-    assert osreg.find(address, "find_btc_wallets") == [address]
+    assert helper(text) == expected
+    assert osreg.find(text, kind) == expected
 
 
-def test_price_and_latlon_helpers():
-    text = "The price is USD 10.00 and 10 USD. Coordinates: 48.8584, 2.2945."
+@pytest.mark.parametrize("kind,text", NEGATIVE_CASES)
+def test_helpers_return_empty_lists_for_non_matches(kind, text):
+    helper = getattr(osreg, kind)
 
-    assert osreg.price(text) == ["USD 10.00", "10 USD"]
-    assert osreg.latlon(text) == [("48.8584", "2.2945")]
+    assert helper(text) == []
+    assert osreg.find(text, kind) == []
 
 
-def test_scan_returns_stable_mapping_and_unknown_kind():
-    text = "Email info@example.com and phone +1 (555) 123-4567."
-    result = osreg.scan(text)
+@pytest.mark.parametrize("kind,alias", ALIAS_CASES)
+def test_find_accepts_aliases(kind, alias):
+    text = SAMPLES[kind]
 
-    assert list(result) == [
+    assert osreg.find(text, alias) == getattr(osreg, kind)(text)
+
+
+def test_find_normalizes_kind_names():
+    text = SAMPLES["phone"]
+
+    assert osreg.find(text, "  PHONE  ") == osreg.phone(text)
+
+
+def test_scan_returns_stable_mapping_and_matches_helpers():
+    result = osreg.scan(COMBINED_TEXT)
+
+    assert list(result) == CANONICAL_KINDS
+    assert result == {
+        kind: getattr(osreg, kind)(COMBINED_TEXT) for kind in CANONICAL_KINDS
+    }
+
+
+def test_scan_empty_input_returns_all_categories():
+    result = osreg.scan("")
+
+    assert list(result) == CANONICAL_KINDS
+    assert all(values == [] for values in result.values())
+
+
+def test_public_exports_and_version_match_project_metadata():
+    exported = set(osreg.__all__)
+    expected_exports = {
+        "OSINTRegex",
+        "__version__",
+        "find",
+        "scan",
         "email",
         "website",
         "phone",
-        "twitter_handle",
         "btc_wallet",
-        "eth_wallet",
-        "monero_wallet",
-        "dash_wallet",
-        "cardano_wallet",
-        "doge_wallet",
-        "litecoin_wallet",
-        "ripple_wallet",
-        "stellar_wallet",
-        "transaction_hash",
-        "price",
         "latlon",
-        "long_string",
-    ]
-    assert result["email"] == ["info@example.com"]
-    assert result["phone"] == ["+1 (555) 123-4567"]
-    assert result["price"] == []
+    }
 
-    with pytest.raises(KeyError):
-        osreg.find(text, "not-a-kind")
+    assert expected_exports.issubset(exported)
+    assert len(osreg.__all__) == len(exported)
+
+    pyproject_text = Path("pyproject.toml").read_text(encoding="utf-8")
+    match = re.search(r'^version = "([^"]+)"$', pyproject_text, re.MULTILINE)
+    assert match is not None
+    assert match.group(1) == osreg.__version__
+
+
+def test_osintregex_wrapper_matches_module_helpers():
+    wrapper = osreg.OSINTRegex()
+    text = SAMPLES["email"] + " " + SAMPLES["phone"] + " " + SAMPLES["btc_wallet"]
+
+    assert wrapper.email(text) == osreg.email(text)
+    assert wrapper.find(text, "email") == osreg.find(text, "email")
+    assert wrapper.scan(text) == osreg.scan(text)

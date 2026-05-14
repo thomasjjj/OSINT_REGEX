@@ -1,20 +1,32 @@
-"""Package-level regex extractors for OSINT-style text mining."""
+"""Package-level regex extractors for OSINT-style text mining.
+
+Import the package as ``import osint_regex as osreg`` and use the module-level
+helpers directly:
+
+* ``osreg.email(text)``
+* ``osreg.phone(text)``
+* ``osreg.find(text, "phone")``
+* ``osreg.scan(text)``
+
+The implementation is registry-driven so the public API stays compact while
+the extractors remain easy to extend and document.
+"""
 
 from __future__ import annotations
 
 import re
 from dataclasses import dataclass
 from functools import wraps
-from typing import Any, Callable, Pattern
+from typing import Any, Callable, Optional, Pattern
 
 __version__ = "0.2.0"
 
-MatchExtractor = Callable[[re.Match[str]], Any | None]
+MatchExtractor = Callable[[re.Match[str]], Optional[Any]]
 
 
 @dataclass(frozen=True)
 class ExtractorSpec:
-    """Registry entry describing how to extract one category."""
+    """Registry entry describing one extraction category."""
 
     name: str
     pattern: Pattern[str]
@@ -103,9 +115,9 @@ PRICE_PATTERN = re.compile(
     r"""
     (?<!\w)
     (?:
-        (?:USD|EUR|€|\$)\s?\d+(?:[.,]\d{3})*(?:[.,]\d{2})?
+        (?:USD|EUR|\u20ac|\$)\s?\d+(?:[.,]\d{3})*(?:[.,]\d{2})?
         |
-        \d+(?:[.,]\d{3})*(?:[.,]\d{2})?\s?(?:USD|EUR|€|\$)
+        \d+(?:[.,]\d{3})*(?:[.,]\d{2})?\s?(?:USD|EUR|\u20ac|\$)
     )
     (?!\w)
     """,
@@ -227,11 +239,7 @@ _SPECS: tuple[ExtractorSpec, ...] = (
 )
 
 _SPEC_BY_NAME = {spec.name: spec for spec in _SPECS}
-_ALIASES = {
-    alias: spec.name
-    for spec in _SPECS
-    for alias in (spec.name, *spec.aliases)
-}
+_ALIASES = {alias: spec.name for spec in _SPECS for alias in (spec.name, *spec.aliases)}
 _PUBLIC_NAMES = [spec.name for spec in _SPECS]
 
 
@@ -247,13 +255,37 @@ def _resolve_kind(kind: str) -> ExtractorSpec:
 
 
 def find(text: str, kind: str) -> list[Any]:
-    """Return matches for a named extraction kind."""
+    """Return matches for one extraction kind.
+
+    Parameters
+    ----------
+    text:
+        Decoded text to inspect.
+    kind:
+        Canonical kind name such as ``"phone"`` or a legacy alias such as
+        ``"find_phone_numbers"``.
+
+    Returns
+    -------
+    list[Any]
+        The extracted matches for that category. Structured outputs such as
+        latitude/longitude pairs are returned as tuples.
+
+    Raises
+    ------
+    KeyError
+        Raised when ``kind`` does not map to a known extractor.
+    """
 
     return _extract_all(text, _resolve_kind(kind))
 
 
 def scan(text: str) -> dict[str, list[Any]]:
-    """Return a stable mapping of every category to its matches."""
+    """Return every category and its matches in a stable order.
+
+    The returned dictionary always includes every canonical category, even when
+    the value is an empty list.
+    """
 
     return {spec.name: _extract_all(text, spec) for spec in _SPECS}
 
@@ -265,7 +297,11 @@ def _make_helper(target: str) -> Callable[[str], list[Any]]:
 
     helper.__name__ = target
     helper.__qualname__ = target
-    helper.__doc__ = f"Return matches for {target!r}."
+    helper.__doc__ = (
+        f"Return matches for the {target.replace('_', ' ')} category.\n\n"
+        f"This helper is generated from the extractor registry and is equivalent "
+        f"to calling find(text, {target!r})."
+    )
     return helper
 
 
@@ -277,7 +313,12 @@ for _alias in sorted({alias for spec in _SPECS for alias in spec.aliases}):
 
 
 class OSINTRegex:
-    """Compatibility wrapper exposing the module-level helpers as methods."""
+    """Compatibility wrapper exposing the module-level helpers as methods.
+
+    Prefer the module-level helpers for new code. This class is kept so older
+    call sites can continue to instantiate ``OSINTRegex`` without a breaking
+    change.
+    """
 
     __slots__ = ()
 
